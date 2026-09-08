@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오리 키우기 - 비주</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:"Noto Sans KR",system-ui,sans-serif;background:#b9e8ff;color:#3f4a50}
+  button{font:inherit}
+  #app{width:100%;height:100%;position:relative;overflow:hidden}
+  .screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity 1.4s ease,filter 1.4s ease}
+  .hidden{opacity:0;pointer-events:none}
+  #start{background:linear-gradient(#bfeeff 0%,#dff7ff 65%,#a7d8e7 100%)}
+  #start:before{content:"";position:absolute;width:65vmin;height:65vmin;border-radius:50%;background:#fff8c9;filter:blur(35px);opacity:.6;top:7%;left:50%;transform:translateX(-50%)}
+  .start-card{position:relative;text-align:center;padding:32px 25px;z-index:2}
+  .title{font-size:clamp(42px,8vw,76px);font-weight:900;letter-spacing:-4px;color:#5b6b70;text-shadow:0 4px #fff}
+  .subtitle{margin-top:8px;color:#71848a;font-size:16px}
+  #duck-start{margin:35px auto 28px;transform:scale(1.25)}
+  .start-btn{border:0;border-radius:999px;padding:16px 52px;background:#fff;color:#65767b;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 10px 25px #719aaa44;transition:.2s}
+  .start-btn:hover{transform:translateY(-3px);box-shadow:0 14px 30px #719aaa55}
+
+  #game{background:linear-gradient(#bdeeff 0%,#e9fbff 68%,#a8dce9 100%)}
+  .cloud{position:absolute;background:#fff;border-radius:999px;filter:blur(1px);opacity:.55}
+  .cloud.c1{width:180px;height:45px;top:13%;left:7%}.cloud.c2{width:240px;height:55px;top:22%;right:4%}.cloud.c3{width:120px;height:35px;top:35%;left:22%}
+  .game-wrap{width:min(900px,94vw);height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:25px 0}
+  .hud{position:absolute;top:22px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;color:#60747a;font-weight:800}
+  .age{font-size:20px;background:#ffffffaa;backdrop-filter:blur(6px);padding:9px 17px;border-radius:999px}
+  .bar{width:180px;height:10px;background:#ffffff99;border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;width:1%;background:#f2cf58;border-radius:99px;transition:width .35s}
+  .duck-stage{height:54vh;min-height:280px;display:flex;align-items:center;justify-content:center;position:relative}
+  .duck{position:relative;width:150px;height:125px;transform-origin:center bottom;transition:transform .55s ease,filter .55s ease}
+  .body{position:absolute;width:112px;height:91px;left:18px;top:28px;border-radius:55% 50% 45% 50%;background:#ffd84f;box-shadow:inset -8px -8px 0 #eec43e}
+  .head{position:absolute;width:76px;height:76px;left:62px;top:0;border-radius:50%;background:#ffe76a;z-index:2;box-shadow:inset -6px -6px 0 #efd15b}
+  .eye{position:absolute;width:8px;height:10px;border-radius:50%;background:#344044;top:28px;left:49px}
+  .beak{position:absolute;width:34px;height:18px;background:#ef9a38;border-radius:60% 20% 20% 60%;top:40px;left:66px;transform:rotate(3deg)}
+  .wing{position:absolute;width:53px;height:42px;border-radius:60% 40% 60% 45%;background:#f3c941;left:28px;top:54px;transform:rotate(13deg);z-index:3}
+  .foot{position:absolute;width:38px;height:10px;background:#ef9a38;border-radius:50%;bottom:0;z-index:5}
+  .foot.f1{left:38px}.foot.f2{left:75px}
+  .halo{position:absolute;width:270px;height:100px;border-radius:50%;background:#fff6a9;filter:blur(30px);opacity:.45;bottom:8%;transition:opacity .5s}
+  .message{height:68px;text-align:center;font-size:18px;font-weight:700;color:#61747a;text-shadow:0 1px #fff}
+  .choices{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .choice{border:2px solid #ffffffaa;background:#ffffffb8;color:#56696f;border-radius:18px;padding:15px 10px;cursor:pointer;font-weight:800;min-height:72px;box-shadow:0 6px 18px #6c9aa822;transition:.2s}
+  .choice:hover{transform:translateY(-3px);background:#fff}
+  .choice:active{transform:scale(.98)}
+  .choice small{display:block;font-weight:500;font-size:12px;opacity:.7;margin-top:4px}
+  .effect{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);font-size:22px;font-weight:900;opacity:0;pointer-events:none}
+  .effect.show{animation:float 1s ease forwards}
+  @keyframes float{0%{opacity:0;transform:translate(-50%,-30%)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-110%)}}
+
+  #ending{background:linear-gradient(#ffb66c 0%,#ff8e62 38%,#d96565 57%,#3e526c 72%,#162b43 100%);opacity:0;pointer-events:none}
+  #ending.show{opacity:1;pointer-events:auto}
+  .sun{position:absolute;width:130px;height:130px;border-radius:50%;background:#ffeeb0;box-shadow:0 0 55px #fff1b0;top:24%;left:50%;transform:translate(-50%,-50%)}
+  .sea{position:absolute;left:0;right:0;top:57%;bottom:0;background:linear-gradient(#e27b72,#37516b 20%,#172b43)}
+  .sea:after{content:"";position:absolute;left:0;right:0;top:2px;height:2px;background:#ffd9a0aa}
+  .ending-duck{position:absolute;left:50%;top:56%;width:90px;height:75px;transform:translateX(-50%) scale(.72);filter:brightness(.32) sepia(.15);animation:walk 11s linear forwards}
+  .ending-duck .body{width:72px;height:58px;left:9px;top:17px;background:#fff;box-shadow:none}
+  .ending-duck .head{width:49px;height:49px;left:39px;background:#fff;box-shadow:none}
+  .ending-duck .eye{width:5px;height:6px;top:18px;left:31px;background:#111}
+  .ending-duck .beak{width:22px;height:11px;top:26px;left:43px;background:#c87943}
+  .ending-duck .wing{width:34px;height:28px;left:16px;top:35px;background:#ddd}
+  .ending-duck .foot{width:25px;height:6px;bottom:0;background:#c87943}
+  .ending-duck .foot.f1{left:24px}.ending-duck .foot.f2{left:47px}
+  @keyframes walk{
+    0%{left:50%;top:56%;opacity:1}
+    18%{left:53%;top:58%}
+    38%{left:58%;top:61%}
+    60%{left:65%;top:64%}
+    80%{left:76%;top:68%;opacity:.85}
+    100%{left:91%;top:72%;opacity:0}
+  }
+  .end-text{position:absolute;z-index:5;top:10%;left:50%;transform:translateX(-50%);width:min(760px,90vw);text-align:center;color:#fff6e4;text-shadow:0 2px 10px #663b3b88;font-weight:700;line-height:1.9;font-size:clamp(17px,3vw,25px);opacity:0;animation:textIn 2s 1s ease forwards}
+  @keyframes textIn{to{opacity:1}}
+  .end-title{font-size:clamp(30px,6vw,50px);font-weight:900;display:block;margin-bottom:18px}
+  .end-sub{font-size:13px;opacity:.75;margin-top:15px}
+  .restart{position:absolute;z-index:8;bottom:7%;left:50%;transform:translateX(-50%);border:1px solid #fff8;background:#ffffff18;color:#fff;border-radius:999px;padding:11px 28px;opacity:0;animation:btnIn 1s 8.5s forwards;cursor:pointer}
+  @keyframes btnIn{to{opacity:.9}}
+  @media(max-width:600px){.choices{gap:7px}.choice{padding:12px 5px;font-size:13px}.choice small{font-size:10px}.duck-stage{height:48vh}.message{font-size:15px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="start" class="screen">
+    <div class="start-card">
+      <div class="title">오리 키우기</div>
+      <div class="subtitle">작은 만남이, 긴 여정이 될 거야.</div>
+      <div id="duck-start" class="duck">
+        <div class="halo"></div><div class="body"></div><div class="head"><div class="eye"></div><div class="beak"></div></div><div class="wing"></div><div class="foot f1"></div><div class="foot f2"></div>
+      </div>
+      <button class="start-btn" id="startBtn">게임 시작</button>
+    </div>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+    <div class="game-wrap">
+      <div class="hud"><div class="age">비주 · <span id="age">1</span>살</div><div class="bar"><i id="progress"></i></div></div>
+      <div class="duck-stage"><div class="halo"></div><div id="duck" class="duck">
+        <div class="body"></div><div class="head"><div class="eye"></div><div class="beak"></div></div><div class="wing"></div><div class="foot f1"></div><div class="foot f2"></div>
+      </div></div>
+      <div class="message" id="message">비주가 세상에 첫발을 내디뎠어요.</div>
+      <div class="choices" id="choices"></div>
+      <div class="effect" id="effect"></div>
+    </div>
+  </section>
+
+  <section id="ending" class="screen">
+    <div class="sun"></div><div class="sea"></div>
+    <div class="end-text">
+      <span class="end-title">100년의 시간</span>
+      “그동안 키워줘서 고마워!<br>난 이제 더 나아가려고 해!<br>이 은혜는 잊지 않을게!!<br>안녕!! 비주야!!”
+      <div class="end-sub">— 노을이 조금씩 어두워지고 있어요.</div>
+    </div>
+    <div class="ending-duck">
+      <div class="body"></div><div class="head"><div class="eye"></div><div class="beak"></div></div><div class="wing"></div><div class="foot f1"></div><div class="foot f2"></div>
+    </div>
+    <button class="restart" onclick="location.reload()">다시 처음으로</button>
+  </section>
+</div>
+
+<script>
+const ages = [
+  [1,10,["꼬옥 안아주기","맛있는 모이 주기","같이 낮잠 자기"]],
+  [11,20,["연못에서 놀기","새 친구 소개하기","따뜻한 둥지 만들기"]],
+  [21,30,["새벽 산책하기","좋아하는 노래 들려주기","같이 여행 가기"]],
+  [31,40,["직접 만든 밥 주기","날개 운동하기","오래 이야기하기"]],
+  [41,50,["오리 친구 만나기","편지 써주기","별 보러 가기"]],
+  [51,60,["천천히 산책하기","추억 사진 보기","차 한 잔 나누기"]],
+  [61,70,["옛날 이야기 듣기","따뜻한 담요 덮기","구름 바라보기"]],
+  [71,80,["손 꼭 잡기","함께 노을 보기","고마웠던 일 말하기"]],
+  [81,90,["마음껏 쉬게 하기","어릴 적 사진 보기","마지막 여행 준비하기"]],
+  [91,100,["곁에 조용히 있기","함께 노을 기다리기","마지막 인사하기"]]
+];
+
+const game = document.getElementById('game'), start = document.getElementById('start'), ending = document.getElementById('ending');
+const duck = document.getElementById('duck'), ageEl = document.getElementById('age'), progress = document.getElementById('progress');
+const message = document.getElementById('message'), choices = document.getElementById('choices'), effect = document.getElementById('effect');
+
+let age=1, busy=false;
+function stageFor(a){return ages.find(x=>a>=x[0]&&a<=x[1])||ages[0]}
+function update(){
+  ageEl.textContent=age;
+  progress.style.width=age+'%';
+  const s=stageFor(age), size=0.72+(age/100)*1.65;
+  duck.style.transform=`scale(${size})`;
+  const white=Math.min(1,(age-1)/80);
+  duck.querySelector('.body').style.background=`rgb(${255},${Math.round(216+white*39)},${Math.round(79+white*176)})`;
+  duck.querySelector('.head').style.background=`rgb(255,${Math.round(231+white*24)},${Math.round(106+white*149)})`;
+  duck.querySelector('.wing').style.background=`rgb(${Math.round(243+white*12)},${Math.round(201+white*35)},${Math.round(65+white*170)})`;
+  message.textContent =
+    age<11 ? "아직은 아주 작은 아기 오리예요." :
+    age<21 ? "호기심이 가득한 시기예요." :
+    age<31 ? "세상이 점점 넓어지고 있어요." :
+    age<41 ? "비주도 자기만의 길을 찾아가요." :
+    age<51 ? "함께한 시간이 추억으로 쌓여요." :
+    age<61 ? "시간은 생각보다 빠르게 흘러가네요." :
+    age<71 ? "이제 비주의 깃털에는 세월이 묻어 있어요." :
+    age<81 ? "말하지 않아도 서로의 마음을 알아요." :
+    age<91 ? "우리의 하루하루가 소중해졌어요." :
+    "이제 정말 마지막 계절이 찾아왔어요.";
+  choices.innerHTML='';
+  s[2].forEach((t,i)=>{
+    const b=document.createElement('button'); b.className='choice';
+    b.innerHTML=t+'<small>'+['함께하는 시간 +','기분 좋은 하루 +','추억 +'][i]+'</small>';
+    b.onclick=()=>grow(t);
+    choices.appendChild(b);
+  });
+}
+function grow(action){
+  if(busy)return; busy=true;
+  effect.textContent=['♡','☀','✦'][Math.floor(Math.random()*3)];
+  effect.classList.remove('show'); void effect.offsetWidth; effect.classList.add('show');
+  age++;
+  if(age>=100){
+    age=100; update();
+    setTimeout(()=>finish(),900);
+  } else {
+    update();
+    setTimeout(()=>busy=false,400);
+  }
+}
+function finish(){
+  game.classList.add('hidden');
+  setTimeout(()=>ending.classList.add('show'),800);
+}
+document.getElementById('startBtn').onclick=()=>{
+  start.classList.add('hidden');
+  setTimeout(()=>{game.classList.remove('hidden');update()},700);
+};
+</script>
+</body>
+</html>
