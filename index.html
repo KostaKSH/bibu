@@ -11,10 +11,11 @@
 #top{top:14px;left:14px;right:14px;padding:10px 14px;display:flex;gap:18px;align-items:center}
 .title{font-weight:800;letter-spacing:.5px}.clock{margin-left:auto;font-variant-numeric:tabular-nums}
 .badge{padding:5px 9px;border-radius:999px;background:#12324b;color:#9dd8ff;font-size:12px}
-#left{left:14px;top:78px;width:250px;padding:12px}
-#right{right:14px;top:78px;width:310px;padding:12px;max-height:calc(100vh - 92px);overflow:auto}
+#left{left:18px;bottom:18px;width:auto;max-width:420px;padding:8px;display:flex;gap:5px;align-items:center}
+#right{right:18px;bottom:18px;top:auto;width:285px;padding:10px;max-height:44vh;overflow:auto}
+#left h3{display:none}
 h3{margin:4px 0 10px;font-size:14px}.small{font-size:12px;color:#a9bdce;line-height:1.45}
-.sector{width:100%;margin:5px 0;padding:10px;border:1px solid #23445d;border-radius:8px;background:#0b1b29;color:#dff3ff;text-align:left;cursor:pointer}
+.sector{width:auto;margin:0;padding:8px 9px;border:1px solid #23445d;border-radius:8px;background:rgba(11,27,41,.86);color:#dff3ff;text-align:left;cursor:pointer;font-size:11px}
 .sector.active{background:#123b58;border-color:#65c9ff}
 .aircraft{padding:9px;margin:7px 0;border:1px solid #203b4f;border-radius:8px;cursor:pointer;background:#0b1822}
 .aircraft.selected{border-color:#69d1ff;background:#102b3d}
@@ -26,8 +27,19 @@ button.action:disabled{opacity:.35;cursor:not-allowed}
 #log{margin-top:10px;max-height:190px;overflow:auto;border-top:1px solid #203746;padding-top:7px}
 .log{font-size:11px;color:#b8cbd8;margin:5px 0}.warn{color:#ffd27a}.danger{color:#ff8585}.ok{color:#8ff0b0}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);padding:10px 16px;border-radius:9px;background:rgba(5,14,20,.94);border:1px solid #31546a;opacity:0;transition:.2s;pointer-events:none}
-#hint{position:fixed;left:50%;top:74px;transform:translateX(-50%);font-size:12px;color:#c4d7e5;background:rgba(5,14,20,.65);padding:7px 10px;border-radius:7px}
-@media(max-width:900px){#left{width:190px}#right{width:260px}.panel{font-size:12px}}
+#hint{position:fixed;left:50%;top:72px;transform:translateX(-50%);font-size:11px;color:#c4d7e5;background:rgba(5,14,20,.5);padding:6px 9px;border-radius:7px}
+@media(max-width:900px){
+ #left{left:8px;right:8px;bottom:8px;max-width:none;overflow-x:auto}
+ #right{right:8px;bottom:66px;width:250px;max-height:38vh}
+ .panel{font-size:12px}
+ .sector{padding:7px 8px;font-size:10px}
+}
+@media(max-width:600px){
+ #top{left:8px;right:8px;top:8px;padding:8px}
+ .title{font-size:12px}.badge{display:none}.clock{font-size:11px}
+ #right{left:8px;right:8px;width:auto;bottom:58px;max-height:35vh}
+ #hint{top:55px;white-space:nowrap;font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -38,7 +50,7 @@ button.action:disabled{opacity:.35;cursor:not-allowed}
   <div id="status">Traffic: 0</div>
   <div class="clock" id="clock">08:00:00</div>
 </div>
-<div id="hint">마우스로 3D 공항을 회전/확대할 수 있습니다. 왼쪽에서 섹터를 선택하세요.</div>
+<div id="hint">3D 공항을 넓게 볼 수 있습니다 · 섹터와 항공기 패널은 작게 표시됩니다.</div>
 
 <div id="left" class="panel">
   <h3>📡 관제 섹터</h3>
@@ -47,13 +59,12 @@ button.action:disabled{opacity:.35;cursor:not-allowed}
   <button class="sector" data-sector="tower">TOWER</button>
   <button class="sector" data-sector="departure">DEPARTURE</button>
   <button class="sector" data-sector="approach">APPROACH</button>
-  <div class="small" style="margin-top:10px">항공기를 선택하면 현재 상황에서 가능한 관제 명령이 오른쪽에 표시됩니다.</div>
+  <div class="small" style="display:none">항공기를 선택하면 현재 상황에서 가능한 관제 명령이 오른쪽에 표시됩니다.</div>
 </div>
 
 <div id="right" class="panel">
-  <h3>🛫 항공기</h3>
+  <h3>🎙️ ATC / 항공기</h3>
   <div id="aircraftList"></div>
-  <h3 style="margin-top:14px">🎙️ 선택 항공기</h3>
   <div id="selectedInfo" class="small">항공기를 선택하세요.</div>
   <div id="actions" style="margin-top:9px"></div>
   <div id="log"><h3>📜 통신 기록</h3></div>
