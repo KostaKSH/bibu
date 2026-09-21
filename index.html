@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATC Airport Simulator</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#071018;color:#eaf4ff}
+#game{position:fixed;inset:0}canvas{display:block}
+.panel{position:fixed;background:rgba(7,16,24,.88);border:1px solid rgba(150,205,255,.22);box-shadow:0 12px 40px rgba(0,0,0,.3);backdrop-filter:blur(8px);border-radius:12px}
+#top{top:14px;left:14px;right:14px;padding:10px 14px;display:flex;gap:18px;align-items:center}
+.title{font-weight:800;letter-spacing:.5px}.clock{margin-left:auto;font-variant-numeric:tabular-nums}
+.badge{padding:5px 9px;border-radius:999px;background:#12324b;color:#9dd8ff;font-size:12px}
+#left{left:14px;top:78px;width:250px;padding:12px}
+#right{right:14px;top:78px;width:310px;padding:12px;max-height:calc(100vh - 92px);overflow:auto}
+h3{margin:4px 0 10px;font-size:14px}.small{font-size:12px;color:#a9bdce;line-height:1.45}
+.sector{width:100%;margin:5px 0;padding:10px;border:1px solid #23445d;border-radius:8px;background:#0b1b29;color:#dff3ff;text-align:left;cursor:pointer}
+.sector.active{background:#123b58;border-color:#65c9ff}
+.aircraft{padding:9px;margin:7px 0;border:1px solid #203b4f;border-radius:8px;cursor:pointer;background:#0b1822}
+.aircraft.selected{border-color:#69d1ff;background:#102b3d}
+.aircraft .row{display:flex;justify-content:space-between}.tag{font-size:10px;color:#8fc9ea}
+#actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+button.action{padding:9px 7px;background:#102b3b;border:1px solid #2b526a;border-radius:7px;color:#e8f6ff;cursor:pointer;font-size:12px}
+button.action:hover{background:#17435b}
+button.action:disabled{opacity:.35;cursor:not-allowed}
+#log{margin-top:10px;max-height:190px;overflow:auto;border-top:1px solid #203746;padding-top:7px}
+.log{font-size:11px;color:#b8cbd8;margin:5px 0}.warn{color:#ffd27a}.danger{color:#ff8585}.ok{color:#8ff0b0}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);padding:10px 16px;border-radius:9px;background:rgba(5,14,20,.94);border:1px solid #31546a;opacity:0;transition:.2s;pointer-events:none}
+#hint{position:fixed;left:50%;top:74px;transform:translateX(-50%);font-size:12px;color:#c4d7e5;background:rgba(5,14,20,.65);padding:7px 10px;border-radius:7px}
+@media(max-width:900px){#left{width:190px}#right{width:260px}.panel{font-size:12px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="top" class="panel">
+  <div class="title">✈️ ATC AIRPORT SIMULATOR</div>
+  <div class="badge">NO AI • RULE BASED</div>
+  <div id="status">Traffic: 0</div>
+  <div class="clock" id="clock">08:00:00</div>
+</div>
+<div id="hint">마우스로 3D 공항을 회전/확대할 수 있습니다. 왼쪽에서 섹터를 선택하세요.</div>
+
+<div id="left" class="panel">
+  <h3>📡 관제 섹터</h3>
+  <button class="sector active" data-sector="clearance">CLEARANCE</button>
+  <button class="sector" data-sector="ground">GROUND</button>
+  <button class="sector" data-sector="tower">TOWER</button>
+  <button class="sector" data-sector="departure">DEPARTURE</button>
+  <button class="sector" data-sector="approach">APPROACH</button>
+  <div class="small" style="margin-top:10px">항공기를 선택하면 현재 상황에서 가능한 관제 명령이 오른쪽에 표시됩니다.</div>
+</div>
+
+<div id="right" class="panel">
+  <h3>🛫 항공기</h3>
+  <div id="aircraftList"></div>
+  <h3 style="margin-top:14px">🎙️ 선택 항공기</h3>
+  <div id="selectedInfo" class="small">항공기를 선택하세요.</div>
+  <div id="actions" style="margin-top:9px"></div>
+  <div id="log"><h3>📜 통신 기록</h3></div>
+</div>
+<div id="toast"></div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+const root=document.getElementById("game");
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x08131b);
+scene.fog=new THREE.Fog(0x08131b,420,900);
+
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,1500);
+camera.position.set(260,230,300);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+root.appendChild(renderer.domElement);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.target.set(0,0,0); controls.maxPolarAngle=Math.PI*.47; controls.minDistance=80; controls.maxDistance=650;
+
+scene.add(new THREE.HemisphereLight(0xaad7ff,0x203020,2.2));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(100,300,80); sun.castShadow=true; scene.add(sun);
+
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(900,700),new THREE.MeshStandardMaterial({color:0x1b3a2a,roughness:1}));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+
+function box(x,z,w,d,color,y=.3){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,y,d),new THREE.MeshStandardMaterial({color,roughness:.85}));
+  m.position.set(x,y/2,z); m.receiveShadow=true; scene.add(m); return m;
+}
+function line(x1,z1,x2,z2,width,color=0x20262b){
+  const len=Math.hypot(x2-x1,z2-z1), ang=Math.atan2(x2-x1,z2-z1);
+  const m=box((x1+x2)/2,(z1+z2)/2,len,width,color,.2); m.rotation.y=ang; return m;
+}
+
+// Runways
+line(-260,0,260,0,38,0x34383c);
+line(-250,105,250,105,32,0x34383c);
+// runway center marks
+for(let x=-230;x<=230;x+=34){box(x,0,14,2,0xdedede,.24);box(x,105,14,2,0xdedede,.24)}
+// Taxiways
+line(-180,-70,180,-70,12,0x3f4548);
+line(-70,-70,-70,105,12,0x3f4548);
+line(80,-70,80,105,12,0x3f4548);
+line(-170,55,170,55,12,0x3f4548);
+line(-230,0,-70,0,12,0x3f4548);
+line(80,0,230,0,12,0x3f4548);
+
+// Apron and terminal
+box(0,180,390,150,0x59656b,.35);
+box(0,235,250,65,0x87929a,25);
+for(let x=-105;x<=105;x+=35){box(x,195,22,18,0x315a76,8)}
+
+const labels=[];
+function textSprite(txt,color="#d9f4ff",scale=0.55){
+ const c=document.createElement("canvas"); c.width=256;c.height=64;
+ const ctx=c.getContext("2d");ctx.fillStyle=color;ctx.font="bold 28px Arial";ctx.textAlign="center";ctx.fillText(txt,128,40);
+ const tex=new THREE.CanvasTexture(c); const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+ const s=new THREE.Sprite(mat);s.scale.set(32*scale,8*scale,1);return s;
+}
+const r1=textSprite("RWY 09/27");r1.position.set(0,2,0);scene.add(r1);
+const r2=textSprite("RWY 18/36");r2.position.set(0,2,105);scene.add(r2);
+const term=textSprite("TERMINAL / GATES");term.position.set(0,34,210);scene.add(term);
+
+// taxiway labels
+[["A",-175,-70],["B",-70,20],["C",80,20],["D",0,55]].forEach(([t,x,z])=>{let s=textSprite(t,"#ffeaa5",.5);s.position.set(x,3,z);scene.add(s)});
+
+const aircraft=[];
+let selected=null, sector="clearance", simSeconds=8*3600, spawnTimer=0, idSeq=1;
+
+const types=[
+ {name:"A320",speed:18,color:0x62c8ff},
+ {name:"B737",speed:20,color:0xffffff},
+ {name:"B787",speed:15,color:0xffd166},
+ {name:"E190",speed:17,color:0xff8ab4}
+];
+
+function makePlane(type){
+ const g=new THREE.Group();
+ const mat=new THREE.MeshStandardMaterial({color:type.color,metalness:.15,roughness:.55});
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(1.5,8,5,10),mat);
+ body.rotation.z=Math.PI/2; g.add(body);
+ const wing=new THREE.Mesh(new THREE.BoxGeometry(7,0.35,1),mat); g.add(wing);
+ const tail=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.3,0.7),mat);tail.position.x=-3;g.add(tail);
+ g.traverse(o=>{if(o.isMesh)o.castShadow=true});
+ scene.add(g);return g;
+}
+function spawn(kind="arrival"){
+ const type=types[Math.floor(Math.random()*types.length)];
+ const a={id:"F"+String(idSeq++).padStart(3,"0"),type,kind,state:kind==="arrival"?"APPROACH":"PARKED",
+   x:kind==="arrival"?(-210+Math.random()*420):( -120+Math.random()*240),z:kind==="arrival"?(-260):(195),
+   targetX:0,targetZ:0,route:[],routeIndex:0,alt:kind==="arrival"?2500:0,gate:"A"+(1+Math.floor(Math.random()*6)),
+   phase:0,wait:0,heading:0,clearance:false};
+ a.mesh=makePlane(type);a.mesh.position.set(a.x,kind==="arrival"?22:3,a.z);
+ aircraft.push(a);
+ log(`${a.id} ${a.type.name} ${kind==="arrival"?"arrived on approach":"requests departure"}.`,"ok");
+ refresh();
+}
+function log(t,cls=""){
+ const d=document.createElement("div");d.className="log "+cls;d.textContent=`[${fmtTime()}] ${t}`;
+ document.getElementById("log").appendChild(d);
+ const el=document.getElementById("log");while(el.children.length>18)el.removeChild(el.children[1]);
+}
+function fmtTime(){const h=Math.floor(simSeconds/3600)%24,m=Math.floor(simSeconds/60)%60,s=Math.floor(simSeconds)%60;return [h,m,s].map((v,i)=>String(v).padStart(2,"0")).join(":")}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.style.opacity=1;clearTimeout(window.__to);window.__to=setTimeout(()=>e.style.opacity=0,1600)}
+
+function select(a){selected=a;refresh()}
+function action(label,fn,disabled=false){const b=document.createElement("button");b.className="action";b.textContent=label;b.disabled=disabled;b.onclick=fn;document.getElementById("actions").appendChild(b)}
+
+function execute(name){
+ if(!selected)return;
+ const a=selected;
+ if(name==="clear"){
+   a.clearance=true;a.state="CLEARED";
+   log(`${a.id}: cleared for departure.`,`ok`);
+ } else if(name==="taxiA"){
+   a.state="TAXI";a.route=[[-70,195],[-70,55],[-70,-70],[0,-70]];a.routeIndex=0;log(`GROUND → ${a.id}: taxi via A, B, hold short RWY 09.`);
+ } else if(name==="taxiC"){
+   a.state="TAXI";a.route=[[80,195],[80,55],[80,-70],[0,-70]];a.routeIndex=0;log(`GROUND → ${a.id}: taxi via C, hold short RWY 09.`);
+ } else if(name==="hold"){a.state="HOLD";a.wait=0;log(`GROUND → ${a.id}: hold position.`,"warn")}
+ else if(name==="takeoff"){a.state="TAKEOFF";a.targetX=260;a.targetZ=0;log(`TOWER → ${a.id}: cleared for takeoff RWY 09.`,"ok")}
+ else if(name==="land"){a.state="LANDING";a.targetX=0;a.targetZ=0;log(`TOWER → ${a.id}: cleared to land RWY 09.`,"ok")}
+ else if(name==="goaround"){a.state="GO_AROUND";a.targetX=200;a.targetZ=-180;a.alt=1500;log(`TOWER → ${a.id}: go around, fly runway heading.`,"warn")}
+ else if(name==="contact"){a.state=sector==="departure"?"DEPARTURE":"APPROACH";log(`${a.id}: contact ${sector.toUpperCase()}.`)}
+ else if(name==="approach"){a.state="FINAL";a.targetX=0;a.targetZ=0;log(`APPROACH → ${a.id}: cleared approach RWY 09.`)}
+ else if(name==="holdapproach"){a.state="HOLD";a.wait=0;log(`APPROACH → ${a.id}: hold.`,"warn")}
+ else if(name==="sequence"){a.state="SEQUENCED";log(`APPROACH → ${a.id}: number in sequence.`)}
+ refresh();
+}
+
+function refresh(){
+ document.querySelectorAll(".sector").forEach(b=>b.classList.toggle("active",b.dataset.sector===sector));
+ const list=document.getElementById("aircraftList");list.innerHTML="";
+ aircraft.forEach(a=>{
+  const d=document.createElement("div");d.className="aircraft"+(a===selected?" selected":"");d.onclick=()=>select(a);
+  d.innerHTML=`<div class="row"><b>${a.id}</b><span class="tag">${a.type.name}</span></div><div class="small">${a.kind.toUpperCase()} • ${a.state} • ${a.gate}</div>`;
+  list.appendChild(d);
+ });
+ document.getElementById("status").textContent=`Traffic: ${aircraft.length}`;
+ const info=document.getElementById("selectedInfo"), acts=document.getElementById("actions");acts.innerHTML="";
+ if(!selected){info.textContent="항공기를 선택하세요.";return}
+ const a=selected;
+ info.innerHTML=`<b>${a.id}</b> — ${a.type.name}<br>상태: ${a.state}<br>위치: ${a.x.toFixed(0)}, ${a.z.toFixed(0)}<br>고도: ${Math.round(a.alt)} ft`;
+ if(sector==="clearance" && (a.state==="PARKED"||a.state==="CLEARED")){action("Clear departure",()=>execute("clear"),a.clearance)}
+ if(sector==="ground"){
+   action("Taxi via A → B",()=>execute("taxiA"),a.state!=="CLEARED"&&a.state!=="HOLD");
+   action("Taxi via C",()=>execute("taxiC"),a.state!=="CLEARED"&&a.state!=="HOLD");
+   action("Hold position",()=>execute("hold"),a.state==="PARKED");
+   action("Contact Tower",()=>execute("contact"),!(a.state==="HOLD"||a.state==="TAXI"));
+ }
+ if(sector==="tower"){
+   action("Clear for takeoff",()=>execute("takeoff"),a.state==="HOLD"||a.state==="TAXI");
+   action("Clear to land",()=>execute("land"),a.state==="FINAL"||a.state==="APPROACH");
+   action("Go around",()=>execute("goaround"),a.state==="FINAL"||a.state==="LANDING");
+   action("Contact Departure",()=>execute("contact"),a.state==="TAKEOFF");
+ }
+ if(sector==="approach"){
+   action("Clear approach",()=>execute("approach"),a.state==="APPROACH"||a.state==="SEQUENCED");
+   action("Sequence",()=>execute("sequence"),a.state==="APPROACH");
+   action("Hold",()=>execute("holdapproach"),a.state==="APPROACH");
+   action("Contact Tower",()=>execute("contact"),a.state==="FINAL");
+ }
+ if(sector==="departure") action("Contact next sector",()=>execute("contact"),false);
+}
+
+document.querySelectorAll(".sector").forEach(b=>b.onclick=()=>{sector=b.dataset.sector;refresh()});
+
+function moveAircraft(dt){
+ for(const a of aircraft){
+  let tx=a.targetX,tz=a.targetZ;
+  if(a.state==="TAXI" && a.route.length){
+    [tx,tz]=a.route[a.routeIndex];
+    const dx=tx-a.x,dz=tz-a.z,dist=Math.hypot(dx,dz);
+    if(dist<3){a.routeIndex++; if(a.routeIndex>=a.route.length){a.state="HOLD";a.wait=0;log(`${a.id}: holding short.`,`ok`);refresh();continue}}
+    else {a.x+=dx/dist*a.type.speed*dt;a.z+=dz/dist*a.type.speed*dt}
+  } else if(a.state==="TAKEOFF"){
+    a.x+=a.type.speed*3*dt;a.alt+=500*dt;
+    if(a.x>300){a.state="DEPARTURE";log(`${a.id}: airborne, transferred to Departure.`,"ok");refresh()}
+  } else if(a.state==="LANDING"){
+    a.x+=(0-a.x)*dt*.7;a.z+=(0-a.z)*dt*.7;a.alt=Math.max(0,a.alt-700*dt);
+    if(Math.hypot(a.x,a.z)<5 && a.alt<30){a.state="TAXI";a.route=[[80,0],[80,55],[80,195]];a.routeIndex=0;log(`${a.id}: landed, taxi to ${a.gate}.`,"ok");refresh()}
+  } else if(a.state==="APPROACH"||a.state==="FINAL"||a.state==="SEQUENCED"){
+    if(a.state==="FINAL"){a.x+=(0-a.x)*dt*.12;a.z+=(0-a.z)*dt*.12;a.alt=Math.max(30,a.alt-250*dt)}
+    else {a.x+=(0-a.x)*dt*.025;a.z+=(0-a.z)*dt*.025}
+  } else if(a.state==="GO_AROUND"){
+    a.x+=(a.targetX-a.x)*dt*.35;a.z+=(a.targetZ-a.z)*dt*.35;a.alt+=250*dt;
+  }
+  a.mesh.position.set(a.x,a.state==="PARKED"?3:Math.max(3,a.alt/120),a.z);
+  a.mesh.rotation.y=Math.atan2(tx-a.x,tz-a.z);
+ }
+}
+function collisionCheck(){
+ for(let i=0;i<aircraft.length;i++)for(let j=i+1;j<aircraft.length;j++){
+  const a=aircraft[i],b=aircraft[j],d=Math.hypot(a.x-b.x,a.z-b.z);
+  const groundA=["TAXI","HOLD","TAKEOFF"].includes(a.state),groundB=["TAXI","HOLD","TAKEOFF"].includes(b.state);
+  if(groundA&&groundB&&d<22){toast("⚠️ TAXIWAY CONFLICT");log(`CONFLICT: ${a.id} / ${b.id} separation ${d.toFixed(1)}m`,"danger")}
+ }
+}
+function randomTraffic(dt){
+ spawnTimer+=dt;
+ const interval=13+Math.random()*18;
+ if(spawnTimer>interval){spawnTimer=0;Math.random()<.55?spawn("arrival"):spawn("departure")}
+}
+let last=performance.now();
+function animate(now){
+ requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;
+ simSeconds+=dt*6;document.getElementById("clock").textContent=fmtTime();
+ randomTraffic(dt);moveAircraft(dt);collisionCheck();
+ renderer.render(scene,camera);
+}
+spawn("arrival");spawn("arrival");spawn("departure");
+animate(performance.now());
+
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
