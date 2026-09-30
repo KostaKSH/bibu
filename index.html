@@ -39,6 +39,24 @@
     overflow: hidden;
   }
 
+  #falling-items {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .falling-item {
+    position: absolute;
+    top: -60px;
+    left: 0;
+    font-size: clamp(28px, 6vw, 52px);
+    line-height: 1;
+    user-select: none;
+    will-change: transform;
+  }
+
   #duck {
     position: absolute;
     left: 50%;
@@ -184,6 +202,103 @@ function schedule() {
 }
 
 schedule();
+
+
+const fallingItems = document.getElementById("falling-items");
+
+const itemEmojis = [
+  "🍔","🍩","🦟","🌯","🐈","🐤","🐥","🌰","🛺","🍻",
+  "🍼","🥟","🍇","🥥","🍣","🍥","🍙","🍫","🍢","🥌",
+  "🗿","🖥️","🪤","🧨","🚬","🎴","📣"
+];
+
+// 한 번에 너무 많이 나오지 않도록 최소/최대 생성 간격
+const MIN_SPAWN_DELAY = 900;
+const MAX_SPAWN_DELAY = 1800;
+
+// 적당한 낙하 속도(px/sec)
+const MIN_SPEED = 100;
+const MAX_SPEED = 150;
+
+let lastFrame = performance.now();
+let nextSpawnAt = performance.now() + randomDelay();
+
+function randomDelay() {
+  return MIN_SPAWN_DELAY + Math.random() * (MAX_SPAWN_DELAY - MIN_SPAWN_DELAY);
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function spawnItem() {
+  const item = document.createElement("div");
+  item.className = "falling-item";
+  item.textContent = itemEmojis[Math.floor(Math.random() * itemEmojis.length)];
+
+  const gameRect = game.getBoundingClientRect();
+  const size = randomBetween(30, 50);
+
+  item.style.fontSize = size + "px";
+  item.style.left = Math.max(0, Math.random() * (gameRect.width - size)) + "px";
+
+  // 각 이모티콘마다 약간 다른 속도
+  item.dataset.y = String(-size - 10);
+  item.dataset.speed = String(randomBetween(MIN_SPEED, MAX_SPEED));
+
+  fallingItems.appendChild(item);
+}
+
+function isColliding(a, b) {
+  const ar = a.getBoundingClientRect();
+  const br = b.getBoundingClientRect();
+
+  return (
+    ar.left < br.right &&
+    ar.right > br.left &&
+    ar.top < br.bottom &&
+    ar.bottom > br.top
+  );
+}
+
+function animateItems(now) {
+  const delta = Math.min((now - lastFrame) / 1000, 0.05);
+  lastFrame = now;
+
+  if (now >= nextSpawnAt) {
+    spawnItem();
+    nextSpawnAt = now + randomDelay();
+  }
+
+  const duckRect = duck.getBoundingClientRect();
+  const items = fallingItems.children;
+
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    let y = Number(item.dataset.y);
+    const speed = Number(item.dataset.speed);
+
+    y += speed * delta;
+    item.dataset.y = String(y);
+    item.style.transform = `translateY(${y}px)`;
+
+    // 오리에 닿으면 즉시 제거
+    if (isColliding(item, duck)) {
+      item.remove();
+      continue;
+    }
+
+    // 화면 아래를 완전히 벗어나면 제거
+    const rect = item.getBoundingClientRect();
+    if (rect.top > window.innerHeight) {
+      item.remove();
+    }
+  }
+
+  requestAnimationFrame(animateItems);
+}
+
+requestAnimationFrame(animateItems);
 
 </script>
 </body>
