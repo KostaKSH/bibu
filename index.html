@@ -65,6 +65,7 @@
 </div>
 
 <script>
+
 const game = document.getElementById("game");
 const duck = document.getElementById("duck");
 const fallingItems = document.getElementById("falling-items");
@@ -75,10 +76,8 @@ let pointerOffsetX = 0;
 function moveDuck(clientX) {
   const gameRect = game.getBoundingClientRect();
   const duckWidth = duck.getBoundingClientRect().width;
-
   let left = clientX - gameRect.left - pointerOffsetX;
   left = Math.max(0, Math.min(left, gameRect.width - duckWidth));
-
   duck.style.left = left + "px";
   duck.style.transform = "none";
 }
@@ -87,9 +86,7 @@ duck.addEventListener("pointerdown", (e) => {
   dragging = true;
   duck.classList.add("dragging");
   duck.setPointerCapture(e.pointerId);
-
-  const rect = duck.getBoundingClientRect();
-  pointerOffsetX = e.clientX - rect.left;
+  pointerOffsetX = e.clientX - duck.getBoundingClientRect().left;
   e.preventDefault();
 });
 
@@ -109,7 +106,6 @@ function stopDragging(e) {
 duck.addEventListener("pointerup", stopDragging);
 duck.addEventListener("pointercancel", stopDragging);
 
-/* 떨어지는 이모티콘 */
 const emojis = [
   "🍔","🍩","🦟","🌯","🐈","🐤","🐥","🌰","🛺",
   "🍻","🍼","🥟","🍇","🥥","🍣","🍥","🍙","🍫",
@@ -124,27 +120,21 @@ function isColliding(a, b) {
   const ar = a.getBoundingClientRect();
   const br = b.getBoundingClientRect();
 
-  return (
-    ar.left < br.right &&
-    ar.right > br.left &&
-    ar.top < br.bottom &&
-    ar.bottom > br.top
-  );
+  return ar.left < br.right &&
+         ar.right > br.left &&
+         ar.top < br.bottom &&
+         ar.bottom > br.top;
 }
 
 function createFallingItem() {
-  const gameRect = game.getBoundingClientRect();
   const item = document.createElement("div");
-
   item.className = "falling-item";
   item.textContent = emojis[Math.floor(Math.random() * emojis.length)];
 
+  const gameRect = game.getBoundingClientRect();
   const size = Math.round(rand(25, 39));
   const startX = rand(0, Math.max(0, gameRect.width - size));
-
-  // 일정한 낙하 속도
-  const fallSpeed = 150; // px/sec
-  const startY = -size - rand(40, 140);
+  const startY = -size - 30;
 
   item.style.fontSize = size + "px";
   item.style.left = startX + "px";
@@ -153,48 +143,53 @@ function createFallingItem() {
 
   fallingItems.appendChild(item);
 
-  let lastTime = performance.now();
+  // 일정한 수직 속도
+  const speed = 150;
   let y = startY;
+  let lastTime = performance.now();
 
-  function animate(now) {
+  function fall(now) {
     if (!item.isConnected) return;
 
-    const deltaTime = Math.min((now - lastTime) / 1000, 0.05);
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
-
-    // 수직으로 일정한 속도로 낙하
-    y += fallSpeed * deltaTime;
+    y += speed * dt;
     item.style.top = y + "px";
 
-    // 오리에 먼저 닿으면 즉시 제거
+    // 오리에 먼저 닿으면 즉시 삭제
     if (isColliding(item, duck)) {
       item.remove();
       return;
     }
 
-    // 이모티콘 전체가 화면 아래로 빠져나가면 제거
-    if (item.getBoundingClientRect().top > game.getBoundingClientRect().bottom) {
+    // 화면 바닥에 닿으면 즉시 삭제
+    const itemRect = item.getBoundingClientRect();
+    const currentGameRect = game.getBoundingClientRect();
+
+    if (itemRect.top >= currentGameRect.bottom) {
       item.remove();
       return;
     }
 
-    requestAnimationFrame(animate);
+    requestAnimationFrame(fall);
   }
 
-  requestAnimationFrame(animate);
+  requestAnimationFrame(fall);
 }
 
-/* 생성 간격 랜덤 — 너무 많이 떨어지지 않도록 제한 */
-function scheduleNextItem() {
-  const delay = rand(1800, 3600);
+// 첫 이모티콘을 바로 하나 생성하고,
+// 이후 1.8~3.6초 사이의 랜덤 간격으로 생성
+createFallingItem();
 
+function scheduleNextItem() {
   setTimeout(() => {
     createFallingItem();
     scheduleNextItem();
-  }, delay);
+  }, rand(1800, 3600));
 }
 
 scheduleNextItem();
+
 </script>
 </body>
 </html>
