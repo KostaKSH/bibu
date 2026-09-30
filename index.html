@@ -112,61 +112,65 @@ const emojis = [
   "🍢","🥌","🗿","🖥️","🪤","🧨","🚬","🎴","📣"
 ];
 
-function rand(min, max) {
+function random(min, max) {
   return Math.random() * (max - min) + min;
 }
 
 function isColliding(a, b) {
-  const ar = a.getBoundingClientRect();
-  const br = b.getBoundingClientRect();
+  const A = a.getBoundingClientRect();
+  const B = b.getBoundingClientRect();
 
-  return ar.left < br.right &&
-         ar.right > br.left &&
-         ar.top < br.bottom &&
-         ar.bottom > br.top;
+  return (
+    A.left < B.right &&
+    A.right > B.left &&
+    A.top < B.bottom &&
+    A.bottom > B.top
+  );
 }
 
 function createFallingItem() {
+  const gameRect = game.getBoundingClientRect();
   const item = document.createElement("div");
+
   item.className = "falling-item";
   item.textContent = emojis[Math.floor(Math.random() * emojis.length)];
 
-  const gameRect = game.getBoundingClientRect();
-  const size = Math.round(rand(25, 39));
-  const startX = rand(0, Math.max(0, gameRect.width - size));
-  const startY = -size - 30;
+  const size = Math.round(random(25, 39));
+
+  // X 위치만 랜덤. Y는 반드시 화면 위 바깥에서 시작
+  const x = random(0, Math.max(0, gameRect.width - size));
+  let y = -size - random(20, 80);
 
   item.style.fontSize = size + "px";
-  item.style.left = startX + "px";
-  item.style.top = startY + "px";
-  item.style.transform = "none";
+  item.style.left = x + "px";
+  item.style.top = y + "px";
 
   fallingItems.appendChild(item);
 
-  // 일정한 수직 속도
-  const speed = 150;
-  let y = startY;
-  let lastTime = performance.now();
+  // 픽셀 단위로 직접 top을 변경해서 CSS transform 충돌을 방지
+  const speed = 140; // px/sec
+  let previousTime = performance.now();
 
-  function fall(now) {
+  function fall(currentTime) {
     if (!item.isConnected) return;
 
-    const dt = Math.min((now - lastTime) / 1000, 0.05);
-    lastTime = now;
-    y += speed * dt;
+    const delta = Math.min((currentTime - previousTime) / 1000, 0.05);
+    previousTime = currentTime;
+
+    y += speed * delta;
     item.style.top = y + "px";
 
-    // 오리에 먼저 닿으면 즉시 삭제
+    // 오리와 충돌하면 즉시 제거
     if (isColliding(item, duck)) {
       item.remove();
       return;
     }
 
-    // 화면 바닥에 닿으면 즉시 삭제
+    // 아이템의 위쪽이 화면 바닥을 넘어가면 제거
     const itemRect = item.getBoundingClientRect();
-    const currentGameRect = game.getBoundingClientRect();
+    const nowGameRect = game.getBoundingClientRect();
 
-    if (itemRect.top >= currentGameRect.bottom) {
+    if (itemRect.top >= nowGameRect.bottom) {
       item.remove();
       return;
     }
@@ -177,18 +181,20 @@ function createFallingItem() {
   requestAnimationFrame(fall);
 }
 
-// 첫 이모티콘을 바로 하나 생성하고,
-// 이후 1.8~3.6초 사이의 랜덤 간격으로 생성
+// 첫 아이템은 즉시 생성
 createFallingItem();
 
-function scheduleNextItem() {
+// 이후 계속 랜덤 생성
+function createNext() {
+  const delay = random(1800, 3600);
+
   setTimeout(() => {
     createFallingItem();
-    scheduleNextItem();
-  }, rand(1800, 3600));
+    createNext();
+  }, delay);
 }
 
-scheduleNextItem();
+createNext();
 
 </script>
 </body>
