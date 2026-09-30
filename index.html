@@ -209,9 +209,7 @@ function showEatEffects() {
   fart.addEventListener("animationend", () => fart.remove(), { once: true });
 
   // 머리 위 랜덤 문구
-  const messages = item.isFood
-    ? ["맛나다!", "응가마려!", "뚱", "배부비~", "히히야~"]
-    : badFoodMessages;
+  const messages = ["맛나다!", "응가마려!", "뚱", "배부비~", "히히야~"];
   const message = document.createElement("div");
   message.className = "food-message";
   message.textContent = messages[Math.floor(Math.random() * messages.length)];
@@ -232,8 +230,6 @@ const foodEmojis = [
   "🍼","🥟","🍇","🥥","🍣","🍥","🍙","🍫","🍢","🥌",
   "🗿","🖥️","🪤","🧨","🚬","🎴","📣"
 ];
-const edibleEmojis = new Set(["🍔", "🍩", "🌯", "🌰", "🍻", "🍼", "🥟", "🍇", "🥥", "🍣", "🍥", "🍙", "🍫", "🍢"]);
-const badFoodMessages = ["우웩!", "맛없어..", "배아파..", "안먹어!!"];
 
 const fallingFoods = [];
 const MAX_FOODS = 7;
@@ -263,8 +259,6 @@ function spawnFood() {
 
   fallingFoods.push({
     el: food,
-    emoji: food.textContent,
-    isFood: edibleEmojis.has(food.textContent),
     x,
     y: -size - 5,
     speed: random(105, 155),
