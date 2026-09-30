@@ -87,6 +87,25 @@ let nextFoodSpawn=0,lastFrameTime=0,gameStarted=false;
 
 function random(min,max){return Math.random()*(max-min)+min;}
 
+// 음식으로 취급할 이모티콘
+const foodEmojisSet = new Set([
+ "🍔","🍩","🌯","🌰","🍻","🍼","🥟","🍇","🥥",
+ "🍣","🍥","🍙","🍫","🍢"
+]);
+
+// 음식이 아닌 이모티콘에 대한 랜덤 멘트
+function showBadFoodEffect(){
+ const duckRect=duck.getBoundingClientRect(),gameRect=game.getBoundingClientRect();
+ const messages=["우웩!","맛없어..","배아파..","안먹어!!"];
+ const msg=document.createElement("div");
+ msg.className="food-message";
+ msg.textContent=messages[Math.floor(Math.random()*messages.length)];
+ msg.style.left=(duckRect.left-gameRect.left+duckRect.width*.5)+"px";
+ msg.style.top=(duckRect.top-gameRect.top-10)+"px";
+ game.appendChild(msg);
+ msg.addEventListener("animationend",()=>msg.remove(),{once:true});
+}
+
 function showEatEffects(){
  const duckRect=duck.getBoundingClientRect(),gameRect=game.getBoundingClientRect();
 
@@ -122,7 +141,10 @@ function boxesOverlap(a,b){
 }
 
 function updateFallingFoods(now){
- if(!gameStarted)return;
+ if(!gameStarted){
+   requestAnimationFrame(updateFallingFoods);
+   return;
+ }
  const dt=Math.min((now-lastFrameTime)/1000,.05);lastFrameTime=now;
  if(now>=nextFoodSpawn){
    spawnFood();nextFoodSpawn=now+random(650,1150);
