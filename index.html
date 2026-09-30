@@ -120,7 +120,7 @@ const foodEmojis = [
 ];
 
 const fallingFoods = [];
-const MAX_FOODS = 5;
+const MAX_FOODS = 7;
 let nextFoodSpawn = 0;
 let lastFrameTime = performance.now();
 
@@ -170,7 +170,7 @@ function updateFallingFoods(now) {
   // 다음 생성까지의 시간은 매번 랜덤
   if (now >= nextFoodSpawn) {
     spawnFood();
-    nextFoodSpawn = now + random(850, 1650);
+    nextFoodSpawn = now + random(650, 1150);
   }
 
   const duckRect = duck.getBoundingClientRect();
