@@ -6,7 +6,13 @@
 <title>오리 게임</title>
 <style>
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+html, body {
+  width:100%;
+  height:100%;
+  min-height:100%;
+  margin:0;
+  overflow:hidden;
+}
 body {
   background:#fff;
   touch-action:none;
@@ -30,9 +36,11 @@ body::after {
 }
 #game {
   position:fixed;
-  inset:0;
+  left:0;
+  top:0;
   width:100vw;
-  height:100vh;
+  height:100dvh;
+  min-height:100vh;
   overflow:hidden;
   touch-action:none;
   isolation:isolate;
@@ -97,6 +105,8 @@ body::after {
 #startScreen {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
   z-index: 100;
   display: flex;
   align-items: flex-end;
@@ -150,8 +160,9 @@ body::after {
 #duck {
   position:absolute !important;
   left:50% !important;
-  bottom:14px !important;
+  bottom:max(14px, env(safe-area-inset-bottom) + 10px) !important;
   top:auto !important;
+  z-index:3 !important;
   transform:translateX(-50%);
 }
 
