@@ -133,7 +133,15 @@ function updateFallingFoods(now){
    item.el.style.transform=`translate3d(${item.x}px,${item.y}px,0)`;
    const foodRect=item.el.getBoundingClientRect();
    if(boxesOverlap(foodRect,duckRect)){
-     item.el.remove();fallingFoods.splice(i,1);showEatEffects();continue;
+     const emoji = item.el.textContent;
+     item.el.remove();
+     fallingFoods.splice(i,1);
+     if(foodEmojisSet.has(emoji)){
+       showEatEffects();
+     } else {
+       showBadFoodEffect();
+     }
+     continue;
    }
    if(foodRect.top>gameRect.bottom){
      item.el.remove();fallingFoods.splice(i,1);
