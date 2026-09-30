@@ -64,16 +64,25 @@ body::after {
 }
 
 
-.fart-effect {
+.fart-effect,
+.food-message {
   position: absolute;
   z-index: 10;
   pointer-events: none;
-  font-size: 28px;
   line-height: 1;
   opacity: 1;
   transform: translate(-50%, 0) scale(.9);
   animation: fartFade 2s ease-out forwards;
   user-select: none;
+  white-space: nowrap;
+}
+.fart-effect {
+  font-size: 28px;
+}
+.food-message {
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(255,255,255,.9);
 }
 @keyframes fartFade {
   0%   { opacity: 1; transform: translate(-50%, 0) scale(.9); }
@@ -129,23 +138,33 @@ duck.addEventListener('pointercancel', endDrag);
 duck.addEventListener('dragstart', e => e.preventDefault());
 
 
-function showFartEffect() {
+function showEatEffects() {
   const duckRect = duck.getBoundingClientRect();
   const gameRect = game.getBoundingClientRect();
 
+  // 💨 오리 엉덩이 바로 왼쪽
   const fart = document.createElement("div");
   fart.className = "fart-effect";
   fart.textContent = "💨";
-
-  // 오리 엉덩이(뒤쪽 아래)에 표시
-  const x = duckRect.left - gameRect.left + duckRect.width * 0.78;
-  const y = duckRect.top - gameRect.top + duckRect.height * 0.68;
-
-  fart.style.left = x + "px";
-  fart.style.top = y + "px";
+  const fartX = duckRect.left - gameRect.left + duckRect.width * 0.18;
+  const fartY = duckRect.top - gameRect.top + duckRect.height * 0.68;
+  fart.style.left = fartX + "px";
+  fart.style.top = fartY + "px";
   game.appendChild(fart);
-
   fart.addEventListener("animationend", () => fart.remove(), { once: true });
+
+  // 머리 위 랜덤 문구
+  const messages = ["맛나다!", "응가마려!", "뚱", "배부비~", "히히야~"];
+  const message = document.createElement("div");
+  message.className = "food-message";
+  message.textContent = messages[Math.floor(Math.random() * messages.length)];
+
+  const messageX = duckRect.left - gameRect.left + duckRect.width * 0.5;
+  const messageY = duckRect.top - gameRect.top - 10;
+  message.style.left = messageX + "px";
+  message.style.top = messageY + "px";
+  game.appendChild(message);
+  message.addEventListener("animationend", () => message.remove(), { once: true });
 }
 
 // ==============================
@@ -225,7 +244,7 @@ function updateFallingFoods(now) {
     if (boxesOverlap(foodRect, duckRect)) {
       item.el.remove();
       fallingFoods.splice(i, 1);
-      showFartEffect();
+      showEatEffects();
       continue;
     }
 
