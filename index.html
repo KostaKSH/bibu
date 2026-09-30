@@ -31,8 +31,11 @@ body::after {
 #game {
   position:fixed;
   inset:0;
+  width:100vw;
+  height:100vh;
   overflow:hidden;
   touch-action:none;
+  isolation:isolate;
 }
 #duck {
   position:absolute;
@@ -135,9 +138,39 @@ body::after {
   opacity:.2;
   pointer-events:none;
 }
-#game > * {
-  position:relative;
-  z-index:1;
+#duck {
+  z-index: 3;
+}
+.falling-food {
+  z-index: 5;
+}
+
+
+
+#duck {
+  position:absolute !important;
+  left:50% !important;
+  bottom:14px !important;
+  top:auto !important;
+  transform:translateX(-50%);
+}
+
+
+.falling-food {
+  position:absolute !important;
+  top:0;
+  left:0;
+}
+
+
+#game::before {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  background-size:cover !important;
+  background-position:center !important;
+  background-repeat:no-repeat !important;
 }
 
 </style>
