@@ -155,31 +155,35 @@ function createFallingItem() {
   fallingItems.appendChild(item);
 
   const startTime = performance.now();
-  const bottomY = gameRect.height - size - 2;
+  // 화면 아래를 완전히 벗어날 때까지 계속 떨어지게 함
+  const endY = gameRect.height + size + 40;
 
   function animate(now) {
     if (!item.isConnected) return;
 
-    const progress = Math.min(1, (now - startTime) / (duration * 1000));
+    const elapsed = (now - startTime) / 1000;
+    // 화면 아래까지 도달하는 시간에 맞춰 계속 낙하
+    const progress = Math.min(1, elapsed / duration);
     const eased = progress * progress;
 
-    // 화면 위 바깥 -> 화면 맨 아래
-    const y = startY + (bottomY - startY) * eased;
+    // 화면 위 바깥 -> 화면 아래 바깥
+    const y = startY + (endY - startY) * eased;
 
     item.style.transform =
-      `translate3d(0, ${y}px, 0) rotate(${rotateStart + progress * 80}deg)`;
+      `translate3d(0, ${y}px, 0) rotate(${rotateStart + elapsed * 80}deg)`;
 
-    // 오리에 닿으면 즉시 제거
+    // 오리에 먼저 닿으면 즉시 제거
     if (isColliding(item, duck)) {
       item.remove();
       return;
     }
 
-    // 화면 맨 밑에 닿는 순간 즉시 정지 -> 쓰레기통
-    if (progress >= 1) {
-      item.style.transform =
-        `translate3d(0, ${bottomY}px, 0) rotate(${rotateStart + 80}deg)`;
-      makeTrash(item);
+    // 화면 맨 아래를 완전히 벗어나면 제거
+    const itemRect = item.getBoundingClientRect();
+    const gameRectNow = game.getBoundingClientRect();
+
+    if (itemRect.top > gameRectNow.bottom) {
+      item.remove();
       return;
     }
 
